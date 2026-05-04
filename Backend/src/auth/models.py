@@ -1,4 +1,6 @@
-from datetime import datetime, UTC
+from __future__ import annotations
+from datetime import datetime 
+
 from database import Base
 
 from sqlalchemy import String, DateTime, ForeignKey, func
@@ -12,8 +14,8 @@ class Sessions(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     token: Mapped[str] = mapped_column(String(512), unique=True, nullable=False, index=True)
     expire_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    revoke_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    device_info: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    ip_address: Mapped[str | None] = mapped_column(String(45), nullable=True)
+    revoke_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    device_info: Mapped[str] = mapped_column(String(255), nullable=True)
+    ip_address: Mapped[str] = mapped_column(String(45), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
