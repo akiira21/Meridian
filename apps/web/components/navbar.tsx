@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useAuthStore } from "@/lib/auth-store";
-import { Droplets, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { useState, useSyncExternalStore } from "react";
 import { ModeToggle } from "@/components/mode-toggle";
+import Logo from "@/components/logo";
 
 function useMounted() {
   return useSyncExternalStore(
@@ -23,15 +24,7 @@ export default function Navbar() {
   return (
     <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
       <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-foreground rounded-lg flex items-center justify-center">
-            <Droplets size={16} className="text-background" />
-          </div>
-          <span className="font-heading text-lg font-semibold tracking-tight">
-            Meridian
-          </span>
-        </Link>
+        <Logo size="md" />
 
         {/* Desktop nav */}
         <div className="hidden md:flex items-center gap-6">
