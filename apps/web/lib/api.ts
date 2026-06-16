@@ -38,7 +38,11 @@ axiosInstance.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${data.access_token}`;
         return axiosInstance(originalRequest);
       } catch (refreshError) {
+        // Refresh failed — clear token and redirect to login
         localStorage.removeItem("meridian_access_token");
+        if (typeof window !== "undefined") {
+          window.location.href = "/login";
+        }
         return Promise.reject(refreshError);
       }
     }
@@ -161,6 +165,60 @@ export interface UserPlanInfo {
   ai_requests_reset_at: string | null;
 }
 
+export interface WaterIntake {
+  id: number;
+  user_id: number;
+  amount_ml: number;
+  logged_at: string;
+}
+
+export interface WaterIntakeListResponse {
+  items: WaterIntake[];
+  total: number;
+}
+
+export interface WaterDailySummary {
+  goal_ml: number;
+  consumed_ml: number;
+  remaining_ml: number;
+  percentage: number;
+}
+
+export interface WaterTodayResponse {
+  intakes: WaterIntake[];
+  summary: WaterDailySummary;
+}
+
+export interface Note {
+  id: number;
+  user_id: number;
+  title: string;
+  content: string | null;
+  is_pinned: boolean;
+  color: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface NoteListResponse {
+  items: Note[];
+  total: number;
+}
+
+export interface NoteCreatePayload {
+  title: string;
+  content?: string | null;
+  is_pinned?: boolean;
+  color?: string;
+}
+
+export interface NoteUpdatePayload {
+  title?: string;
+  content?: string | null;
+  is_pinned?: boolean;
+  color?: string;
+}
+
 export const api = {
   login: (payload: LoginPayload) =>
     axiosInstance.post<LoginResponse>("/api/v1/auth/login", payload),
@@ -225,6 +283,39 @@ export const api = {
 
   getPlanInfo: () =>
     axiosInstance.get<UserPlanInfo>("/api/v1/ai/plan"),
+
+  // Water
+  logWater: (amount_ml: number) =>
+    axiosInstance.post<WaterIntake>("/api/v1/water/log", { amount_ml }),
+
+  getWaterToday: () =>
+    axiosInstance.get<WaterTodayResponse>("/api/v1/water/today"),
+
+  getWaterHistory: (limit?: number, offset?: number) =>
+    axiosInstance.get<WaterIntakeListResponse>("/api/v1/water/history", {
+      params: { limit, offset },
+    }),
+
+  deleteWaterIntake: (id: number) =>
+    axiosInstance.delete(`/api/v1/water/${id}`),
+
+  // Notes
+  createNote: (payload: NoteCreatePayload) =>
+    axiosInstance.post<Note>("/api/v1/notes", payload),
+
+  getNotes: (search?: string) =>
+    axiosInstance.get<NoteListResponse>("/api/v1/notes", {
+      params: search ? { search } : undefined,
+    }),
+
+  updateNote: (id: number, payload: NoteUpdatePayload) =>
+    axiosInstance.patch<Note>(`/api/v1/notes/${id}`, payload),
+
+  deleteNote: (id: number) =>
+    axiosInstance.delete(`/api/v1/notes/${id}`),
+
+  togglePinNote: (id: number) =>
+    axiosInstance.post<Note>(`/api/v1/notes/${id}/pin`),
 };
 
 export function setAccessToken(token: string) {

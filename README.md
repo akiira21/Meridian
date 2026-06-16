@@ -8,10 +8,10 @@ A personal life management PWA — water tracker, todos, reminders, events, imag
 - [x] Setup FastAPI backend (async) with SQLAlchemy, PostgreSQL, and Alembic
 - [x] Docker Compose for Postgres + backend
 - [x] Auth — PIN/password login with JWT
-- [ ] Water tracker — daily goal, progress ring, history
-- [ ] Todos — CRUD, priorities, due dates, filters
+- [x] Water tracker — daily goal, progress fill, quick add, history, delete
+- [x] Todos — CRUD, energy/context, filters, AI generate, focus timer, snooze, done-for-day
 - [ ] Reminders — time-based with repeat rules
 - [ ] Events — calendar view, create/edit, color tags
-- [ ] Short notes — quick capture, pin, search
+- [x] Short notes — quick capture, pin, search, edit, delete
 - [ ] Image-to-calorie — TFLite food classifier + OpenFoodFacts nutrition lookup
 - [ ] Offline support and PWA install prompt

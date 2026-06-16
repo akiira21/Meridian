@@ -35,12 +35,26 @@ export default function Navbar() {
             Home
           </Link>
           {mounted && isAuthenticated && (
-            <Link
-              href="/todos"
-              className="text-sm font-body text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Todos
-            </Link>
+            <>
+              <Link
+                href="/todos"
+                className="text-sm font-body text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Todos
+              </Link>
+              <Link
+                href="/water"
+                className="text-sm font-body text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Water
+              </Link>
+              <Link
+                href="/notes"
+                className="text-sm font-body text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Notes
+              </Link>
+            </>
           )}
           <div className="h-4 w-px bg-border" />
           <ModeToggle />
@@ -90,13 +104,29 @@ export default function Navbar() {
             Home
           </Link>
           {mounted && isAuthenticated && (
-            <Link
-              href="/todos"
-              className="block text-sm font-body text-muted-foreground hover:text-foreground transition-colors"
-              onClick={() => setMobileOpen(false)}
-            >
-              Todos
-            </Link>
+            <>
+              <Link
+                href="/todos"
+                className="block text-sm font-body text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => setMobileOpen(false)}
+              >
+                Todos
+              </Link>
+              <Link
+                href="/water"
+                className="block text-sm font-body text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => setMobileOpen(false)}
+              >
+                Water
+              </Link>
+              <Link
+                href="/notes"
+                className="block text-sm font-body text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => setMobileOpen(false)}
+              >
+                Notes
+              </Link>
+            </>
           )}
           <div className="pt-2 border-t border-border">
             <ModeToggle />

@@ -97,16 +97,29 @@ def logout(
     response: Response,
     request: Request,
     db=Depends(get_db_session),
-    user=Depends(get_current_user),
+    config: Config = Depends(get_config),
 ):
+    # Try to identify user from refresh token cookie (works even if access token expired)
     refresh_token = request.cookies.get("refresh_token")
+    user_id = None
+
     if refresh_token:
+        try:
+            from utils.auth import decode_token
+            payload = decode_token(refresh_token, config.JWT_SECRET)
+            user_id = payload.get("user_id")
+        except Exception:
+            pass
+
+        # Revoke the session by refresh token
         AuthRepository.revokeSession(db, refresh_token)
-    else:
-        # Fallback: revoke all active sessions for the user
-        active_sessions = AuthRepository.getActiveSessions(db, user["user_id"])
+
+    if user_id:
+        # Also revoke any other active sessions for this user as fallback
+        active_sessions = AuthRepository.getActiveSessions(db, int(user_id))
         for session in active_sessions:
-            session.revoke_at = datetime.now()
+            if session.token != refresh_token:
+                session.revoke_at = datetime.now()
         db.commit()
 
     response.delete_cookie(key="refresh_token", path="/api/v1/auth")

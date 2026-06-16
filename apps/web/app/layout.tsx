@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans, Sora } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/theme-provider";
+import AuthCheck from "@/components/auth-check";
 
 const bodyFont = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -39,6 +40,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange={false}
         >
+          <AuthCheck />
           {children}
         </ThemeProvider>
       </body>

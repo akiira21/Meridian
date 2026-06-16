@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/auth-store";
 import { api, Todo, TodoStats } from "@/lib/api";
+import Link from "next/link";
 import {
   Check,
   Clock,
@@ -21,8 +22,12 @@ import {
   ListTodo,
   Inbox,
   Sun,
+  Timer,
+  ChevronLeft,
 } from "lucide-react";
 import { ModeToggle } from "@/components/mode-toggle";
+import Logo from "@/components/logo";
+import NumberStepper from "@/components/ui/number-stepper";
 
 export default function TodosPage() {
   const router = useRouter();
@@ -55,6 +60,13 @@ export default function TodosPage() {
   // Done for day
   const [showDoneForDay, setShowDoneForDay] = useState(false);
   const [doneForDayResult, setDoneForDayResult] = useState<string | null>(null);
+
+  // Focus timer
+  const [focusTodo, setFocusTodo] = useState<Todo | null>(null);
+  const [focusDuration, setFocusDuration] = useState(25);
+  const [focusRemaining, setFocusRemaining] = useState(25 * 60);
+  const [focusRunning, setFocusRunning] = useState(false);
+  const focusIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (!rehydrated) return;
@@ -174,6 +186,70 @@ export default function TodosPage() {
     }
   }
 
+  // Focus timer
+  function openFocus(todo: Todo) {
+    setFocusTodo(todo);
+    setFocusDuration(25);
+    setFocusRemaining(25 * 60);
+    setFocusRunning(false);
+  }
+
+  function closeFocus() {
+    if (focusIntervalRef.current) {
+      clearInterval(focusIntervalRef.current);
+      focusIntervalRef.current = null;
+    }
+    setFocusTodo(null);
+    setFocusRunning(false);
+  }
+
+  function toggleFocusTimer() {
+    setFocusRunning((prev) => !prev);
+  }
+
+  async function finishFocus() {
+    if (!focusTodo) return;
+    const actualMinutes = Math.max(1, Math.round((focusDuration * 60 - focusRemaining) / 60));
+    try {
+      await api.startFocus(focusTodo.id);
+      await api.endFocus(focusTodo.id, actualMinutes);
+      closeFocus();
+      loadTodos();
+      loadStats();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save focus time");
+    }
+  }
+
+  useEffect(() => {
+    if (focusRunning) {
+      focusIntervalRef.current = setInterval(() => {
+        setFocusRemaining((prev) => {
+          if (prev <= 1) {
+            finishFocus();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else if (focusIntervalRef.current) {
+      clearInterval(focusIntervalRef.current);
+      focusIntervalRef.current = null;
+    }
+    return () => {
+      if (focusIntervalRef.current) {
+        clearInterval(focusIntervalRef.current);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusRunning]);
+
+  function formatTime(seconds: number) {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  }
+
   async function handleAI() {
     if (!aiPrompt.trim()) return;
     setAiLoading(true);
@@ -237,8 +313,13 @@ export default function TodosPage() {
       <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-border">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <ListTodo size={18} className="text-foreground" />
-            <span className="font-heading text-base font-semibold tracking-tight">Todos</span>
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-muted hover:bg-muted/80 transition-colors"
+            >
+              <ChevronLeft size={16} />
+            </Link>
+            <Logo size="sm" href="/dashboard" />
           </div>
           <div className="flex items-center gap-2">
             <div className="hidden sm:block">
@@ -268,7 +349,7 @@ export default function TodosPage() {
       <main className="max-w-2xl mx-auto px-4 sm:px-6 py-6 space-y-6">
         {/* Stats Row */}
         {stats && (
-          <div className="flex items-center gap-3 overflow-x-auto pb-2">
+          <div className="flex items-center gap-3 flex-wrap">
             <div className="flex items-center gap-1.5 px-3 py-1.5 bg-card border border-border rounded-full">
               <Check size={12} className="text-green-600" />
               <span className="font-body text-xs font-medium">{stats.completed_today}</span>
@@ -355,12 +436,13 @@ export default function TodosPage() {
               {/* Minutes */}
               <div className="flex items-center gap-1">
                 <Clock size={12} className="text-muted-foreground" />
-                <input
-                  type="number"
-                  value={composeMinutes || ""}
-                  onChange={(e) => setComposeMinutes(e.target.value ? parseInt(e.target.value) : null)}
+                <NumberStepper
+                  value={composeMinutes}
+                  onChange={setComposeMinutes}
+                  min={0}
+                  step={5}
                   placeholder="min"
-                  className="w-12 bg-transparent font-body text-xs text-foreground placeholder:text-muted-foreground focus:outline-none"
+                  unit="m"
                 />
               </div>
             </div>
@@ -403,7 +485,7 @@ export default function TodosPage() {
         )}
 
         {/* Filter Tabs */}
-        <div className="flex items-center gap-1 overflow-x-auto pb-1">
+        <div className="flex items-center gap-1 flex-wrap">
           {filterTabs.map((tab) => {
             const Icon = tab.icon;
             return (
@@ -515,13 +597,22 @@ export default function TodosPage() {
                 </div>
                 <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                   {todo.status !== "completed" && (
-                    <button
-                      onClick={() => handleSnooze(todo.id)}
-                      className="p-1.5 rounded-full hover:bg-muted transition-colors"
-                      title="Snooze"
-                    >
-                      <Pause size={13} className="text-muted-foreground" />
-                    </button>
+                    <>
+                      <button
+                        onClick={() => openFocus(todo)}
+                        className="p-1.5 rounded-full hover:bg-muted transition-colors"
+                        title="Focus"
+                      >
+                        <Timer size={13} className="text-muted-foreground" />
+                      </button>
+                      <button
+                        onClick={() => handleSnooze(todo.id)}
+                        className="p-1.5 rounded-full hover:bg-muted transition-colors"
+                        title="Snooze"
+                      >
+                        <Pause size={13} className="text-muted-foreground" />
+                      </button>
+                    </>
                   )}
                   <button
                     onClick={() => handleDelete(todo.id)}
@@ -610,6 +701,66 @@ export default function TodosPage() {
                 className="flex-1 px-4 py-2.5 bg-foreground text-background rounded-full font-body text-sm font-medium hover:opacity-80 transition-opacity"
               >
                 Yes, I&apos;m done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Focus Timer Modal */}
+      {focusTodo && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-card border border-border rounded-2xl p-6 shadow-lg text-center">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-2">
+                <Timer size={18} className="text-foreground" />
+                <h2 className="font-heading text-base font-medium tracking-tight">Focus</h2>
+              </div>
+              <button
+                onClick={closeFocus}
+                className="p-1.5 rounded-full hover:bg-muted transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <p className="text-sm text-muted-foreground font-body mb-6 truncate px-2">
+              {focusTodo.title}
+            </p>
+            <div className="text-6xl font-heading font-medium tracking-tight tabular-nums mb-8">
+              {formatTime(focusRemaining)}
+            </div>
+            {!focusRunning && focusRemaining === focusDuration * 60 && (
+              <div className="flex items-center justify-center gap-2 mb-6">
+                {[15, 25, 45].map((min) => (
+                  <button
+                    key={min}
+                    onClick={() => {
+                      setFocusDuration(min);
+                      setFocusRemaining(min * 60);
+                    }}
+                    className={`px-3 py-1.5 rounded-full font-body text-xs font-medium transition-colors ${
+                      focusDuration === min
+                        ? "bg-foreground text-background"
+                        : "bg-muted text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {min}m
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={toggleFocusTimer}
+                className="flex-1 px-4 py-2.5 bg-foreground text-background rounded-full font-body text-sm font-medium hover:opacity-80 transition-opacity"
+              >
+                {focusRunning ? "Pause" : focusRemaining === focusDuration * 60 ? "Start" : "Resume"}
+              </button>
+              <button
+                onClick={finishFocus}
+                className="flex-1 px-4 py-2.5 bg-background text-foreground border border-border rounded-full font-body text-sm font-medium hover:bg-muted transition-colors"
+              >
+                Finish
               </button>
             </div>
           </div>

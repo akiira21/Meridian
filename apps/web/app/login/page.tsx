@@ -27,7 +27,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (rehydrated && isAuthenticated) {
-      router.push("/");
+      router.push("/dashboard");
     }
   }, [isAuthenticated, rehydrated, router]);
 
@@ -50,7 +50,7 @@ export default function LoginPage() {
     setSubmitError(null);
     try {
       await login(data.email, data.password);
-      router.push("/");
+      router.push("/dashboard");
     } catch (err) {
       setSubmitError(
         err instanceof Error ? err.message : "Failed to sign in. Please try again."

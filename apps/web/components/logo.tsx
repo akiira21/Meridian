@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Droplets } from "lucide-react";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 interface LogoProps {
@@ -17,17 +17,17 @@ export default function Logo({
 }: LogoProps) {
   const sizes = {
     sm: {
-      icon: 12,
+      icon: 24,
       iconBox: "w-6 h-6 rounded-md",
       text: "text-sm",
     },
     md: {
-      icon: 16,
+      icon: 32,
       iconBox: "w-8 h-8 rounded-lg",
       text: "text-lg",
     },
     lg: {
-      icon: 18,
+      icon: 40,
       iconBox: "w-9 h-9 sm:w-10 sm:h-10 rounded-xl",
       text: "text-lg sm:text-xl",
     },
@@ -37,13 +37,14 @@ export default function Logo({
 
   const content = (
     <div className={cn("flex items-center gap-2", className)}>
-      <div
-        className={cn(
-          "bg-foreground flex items-center justify-center shrink-0",
-          s.iconBox
-        )}
-      >
-        <Droplets size={s.icon} className="text-background" />
+      <div className={cn("flex items-center justify-center shrink-0", s.iconBox)}>
+        <Image
+          src="/logo.svg"
+          alt="Meridian logo"
+          width={s.icon}
+          height={s.icon}
+          className="h-full w-full"
+        />
       </div>
       {showText && (
         <span className={cn("font-heading font-semibold tracking-tight", s.text)}>

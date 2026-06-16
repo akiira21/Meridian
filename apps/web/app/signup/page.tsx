@@ -42,7 +42,7 @@ export default function SignupPage() {
 
   useEffect(() => {
     if (rehydrated && isAuthenticated) {
-      router.push("/");
+      router.push("/dashboard");
     }
   }, [isAuthenticated, rehydrated, router]);
 
@@ -66,7 +66,7 @@ export default function SignupPage() {
     setSubmitError(null);
     try {
       await signup(data);
-      router.push("/");
+      router.push("/dashboard");
     } catch (err) {
       setSubmitError(
         err instanceof Error

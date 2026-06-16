@@ -15,12 +15,12 @@ interface BentoGridProps {
 export default function BentoGrid({ items, variant = "2-2" }: BentoGridProps) {
   if (variant === "3-1") {
     return (
-      <div className="grid gap-3 md:grid-cols-4">
+      <div className="grid gap-4 lg:grid-cols-4">
         {items.slice(0, 3).map((item, i) => (
           <BentoCard key={i} item={item} compact />
         ))}
         {items[3] && (
-          <BentoCard item={items[3]} className="md:col-span-1" />
+          <BentoCard item={items[3]} className="lg:col-span-1" />
         )}
       </div>
     );
@@ -28,9 +28,9 @@ export default function BentoGrid({ items, variant = "2-2" }: BentoGridProps) {
 
   if (variant === "1-3") {
     return (
-      <div className="grid gap-3 md:grid-cols-4">
+      <div className="grid gap-4 lg:grid-cols-4">
         {items[0] && (
-          <BentoCard item={items[0]} className="md:col-span-1" />
+          <BentoCard item={items[0]} className="lg:col-span-1" />
         )}
         {items.slice(1, 4).map((item, i) => (
           <BentoCard key={i} item={item} compact />
@@ -41,7 +41,7 @@ export default function BentoGrid({ items, variant = "2-2" }: BentoGridProps) {
 
   if (variant === "2-2") {
     return (
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2">
         {items.slice(0, 4).map((item, i) => (
           <BentoCard key={i} item={item} />
         ))}
@@ -51,7 +51,7 @@ export default function BentoGrid({ items, variant = "2-2" }: BentoGridProps) {
 
   // 1-1-1 single row
   return (
-    <div className="grid gap-3 md:grid-cols-3">
+    <div className="grid gap-4 lg:grid-cols-3">
       {items.slice(0, 3).map((item, i) => (
         <BentoCard key={i} item={item} compact />
       ))}
