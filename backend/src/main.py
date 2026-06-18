@@ -7,6 +7,8 @@ from database import db
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response
 from limiter import limiter
 from slowapi.errors import RateLimitExceeded
 from router import v1_router
@@ -27,6 +29,24 @@ else:
     )
 
 logger = logging.getLogger(__name__)
+
+
+class OptionsBypassMiddleware(BaseHTTPMiddleware):
+    """Intercept OPTIONS requests and return 200 before they hit CORS/rate-limiting layers."""
+
+    async def dispatch(self, request, call_next):
+        if request.method == "OPTIONS":
+            origin = request.headers.get("origin", "*")
+            return Response(
+                status_code=200,
+                headers={
+                    "Access-Control-Allow-Origin": origin,
+                    "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+                    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+                    "Access-Control-Allow-Credentials": "true",
+                },
+            )
+        return await call_next(request)
 
 
 @asynccontextmanager
@@ -87,6 +107,9 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization"],
 )
+
+# Run before CORSMiddleware so OPTIONS are handled cleanly even when origins mismatch
+app.add_middleware(OptionsBypassMiddleware)
 
 API_PREFIX = "/api/v1"
 
