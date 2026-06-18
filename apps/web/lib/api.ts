@@ -27,7 +27,15 @@ axiosInstance.interceptors.response.use(
     const originalRequest = error.config;
     if (!originalRequest) return Promise.reject(error);
 
-    if (error.response?.status === 401 && !originalRequest.url?.includes("/refresh")) {
+    const isAuthEndpoint =
+      originalRequest.url?.includes("/login") ||
+      originalRequest.url?.includes("/register");
+
+    if (
+      error.response?.status === 401 &&
+      !originalRequest.url?.includes("/refresh") &&
+      !isAuthEndpoint
+    ) {
       try {
         const { data } = await axios.post<AuthTokenResponse>(
           `${API_BASE_URL}/api/v1/auth/refresh`,
@@ -47,7 +55,26 @@ axiosInstance.interceptors.response.use(
       }
     }
 
-    return Promise.reject(error);
+    // Extract server error message for better frontend errors
+    const responseData = error.response?.data as Record<string, unknown> | undefined;
+    let message = error.message;
+    if (responseData) {
+      if (typeof responseData.detail === "string") {
+        message = responseData.detail;
+      } else if (typeof responseData.detail === "object" && responseData.detail !== null) {
+        const detailObj = responseData.detail as Record<string, unknown>;
+        if (typeof detailObj.message === "string") {
+          message = detailObj.message;
+        } else if (typeof detailObj.code === "string") {
+          message = detailObj.code;
+        }
+      } else if (typeof responseData.message === "string") {
+        message = responseData.message;
+      }
+    }
+    const enhancedError = new Error(message);
+    (enhancedError as Error & { statusCode?: number }).statusCode = error.response?.status;
+    return Promise.reject(enhancedError);
   }
 );
 

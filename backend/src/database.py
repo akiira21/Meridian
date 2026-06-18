@@ -78,10 +78,15 @@ def init_database(database_url: str) -> None:
 
 
 def get_db_session():
+    if db._engine is None:
+        logger.error("Database is not initialized. Call db.init(...) first.")
+        raise RuntimeError("Database is not initialized. Call db.init(...) first.")
+
     session = db.SessionLocal()
     try:
         yield session
-        session.commit()
+        if session.new or session.dirty or session.deleted:
+            session.commit()
     except Exception:
         session.rollback()
         raise

@@ -49,9 +49,11 @@ class AuthRepository:
     @staticmethod
     def getUserSession(db, user_id):
         try:
+            now = datetime.now()
             session = db.query(Sessions).filter(
                 Sessions.user_id == user_id,
                 Sessions.revoke_at.is_(None),
+                Sessions.expire_at > now,
             ).first()
 
             return session
@@ -64,9 +66,11 @@ class AuthRepository:
     @staticmethod
     def getActiveSessions(db, user_id):
         try:
+            now = datetime.now()
             sessions = db.query(Sessions).filter(
                 Sessions.user_id == user_id,
                 Sessions.revoke_at.is_(None),
+                Sessions.expire_at > now,
             ).order_by(Sessions.created_at.desc()).all()
 
             return sessions

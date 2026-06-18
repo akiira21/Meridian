@@ -62,7 +62,7 @@ export const useAuthStore = create<AuthState>()(
           const message =
             err instanceof Error ? err.message : "Login failed. Please try again.";
           set({ error: message, loading: false });
-          throw new Error(message);
+          throw err instanceof Error ? err : new Error(message);
         }
       },
 
@@ -91,7 +91,7 @@ export const useAuthStore = create<AuthState>()(
               ? err.message
               : "Registration failed. Please try again.";
           set({ error: message, loading: false });
-          throw new Error(message);
+          throw err instanceof Error ? err : new Error(message);
         }
       },
 
