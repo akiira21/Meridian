@@ -49,17 +49,66 @@ export default function AICompanionBubble() {
     return "night";
   }
 
-  async function loadInsights() {
+  function getCacheKey(): string {
+    const today = new Date().toISOString().split("T")[0];
+    return `meridianly-ai-insights-${today}-${user?.user_id || ""}`;
+  }
+
+  function loadFromCache(): AIInsightItem[] | null {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = localStorage.getItem(getCacheKey());
+      if (raw) return JSON.parse(raw);
+    } catch {
+      // ignore
+    }
+    return null;
+  }
+
+  function saveToCache(items: AIInsightItem[]) {
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.setItem(getCacheKey(), JSON.stringify(items));
+    } catch {
+      // ignore
+    }
+  }
+
+  async function loadInsights(skipCache = false) {
     if (!isAuthenticated || !enabled) return;
+
+    if (!skipCache) {
+      const cached = loadFromCache();
+      if (cached && cached.length > 0) {
+        setInsights(cached);
+        setLoading(false);
+        refreshInsightsSilently();
+        return;
+      }
+    }
+
     setLoading(true);
     try {
       const { data } = await api.getDailyInsights();
       setInsights(data.insights);
+      saveToCache(data.insights);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load insights");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function refreshInsightsSilently() {
+    if (!isAuthenticated || !enabled) return;
+    try {
+      const { data } = await api.getDailyInsights();
+      setInsights(data.insights);
+      saveToCache(data.insights);
+      setError(null);
+    } catch {
+      // silently fail
     }
   }
 
@@ -70,17 +119,15 @@ export default function AICompanionBubble() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, enabled]);
 
-  // Auto-refresh insights every 10 minutes so they're ready when notification time hits
   useEffect(() => {
     if (!isAuthenticated || !enabled) return;
     const interval = setInterval(() => {
-      loadInsights();
+      refreshInsightsSilently();
     }, 10 * 60 * 1000);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, enabled]);
 
-  // Auto-expand the current time period's insight when panel opens
   useEffect(() => {
     if (open && insights.length > 0) {
       const current = getCurrentPeriod();
@@ -128,10 +175,10 @@ export default function AICompanionBubble() {
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 16 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
             className="fixed bottom-24 right-6 z-50 w-[92vw] max-w-sm bg-card border border-border rounded-3xl shadow-2xl overflow-hidden"
           >
             <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
@@ -174,10 +221,9 @@ export default function AICompanionBubble() {
                   const isExpanded = expandedId === insight.id;
                   const isCurrentPeriod = insight.insight_type === getCurrentPeriod();
                   return (
-                    <motion.div
+                    <div
                       key={insight.id}
-                      layout
-                      className={`relative p-4 rounded-2xl bg-gradient-to-br ${TYPE_GRADIENTS[insight.insight_type as keyof typeof TYPE_GRADIENTS]} border ${isCurrentPeriod ? "border-foreground/30" : "border-border/50"}`}
+                      className={`relative p-4 rounded-2xl bg-gradient-to-br ${TYPE_GRADIENTS[insight.insight_type as keyof typeof TYPE_GRADIENTS]} border transition-colors ${isCurrentPeriod ? "border-foreground/30" : "border-border/50"}`}
                     >
                       {!insight.is_read && (
                         <span className="absolute top-3 right-3 w-2 h-2 bg-destructive rounded-full" />
@@ -203,40 +249,38 @@ export default function AICompanionBubble() {
                         <h4 className="font-heading text-sm font-medium mb-1 pr-4">
                           {insight.title}
                         </h4>
-                        <AnimatePresence>
-                          {isExpanded && (
-                            <motion.div
-                              initial={{ opacity: 0, height: 0 }}
-                              animate={{ opacity: 1, height: "auto" }}
-                              exit={{ opacity: 0, height: 0 }}
-                              className="overflow-hidden"
-                            >
-                              <p className="text-xs text-muted-foreground font-body leading-relaxed mb-2">
-                                {insight.message}
-                              </p>
-                              {insight.tips.length > 0 && (
-                                <ul className="space-y-1">
-                                  {insight.tips.map((tip, idx) => (
-                                    <li
-                                      key={idx}
-                                      className="flex items-start gap-1.5 text-xs text-foreground font-body"
-                                    >
-                                      <ChevronRight size={12} className="mt-0.5 shrink-0 text-muted-foreground" />
-                                      {tip}
-                                    </li>
-                                  ))}
-                                </ul>
-                              )}
-                            </motion.div>
+
+                        {/* Expanded content with CSS transition instead of framer-motion layout */}
+                        <div
+                          className={`overflow-hidden transition-all duration-300 ease-out ${
+                            isExpanded ? "max-h-96 opacity-100 mt-2" : "max-h-0 opacity-0"
+                          }`}
+                        >
+                          <p className="text-xs text-muted-foreground font-body leading-relaxed mb-2">
+                            {insight.message}
+                          </p>
+                          {insight.tips.length > 0 && (
+                            <ul className="space-y-1">
+                              {insight.tips.map((tip, idx) => (
+                                <li
+                                  key={idx}
+                                  className="flex items-start gap-1.5 text-xs text-foreground font-body"
+                                >
+                                  <ChevronRight size={12} className="mt-0.5 shrink-0 text-muted-foreground" />
+                                  {tip}
+                                </li>
+                              ))}
+                            </ul>
                           )}
-                        </AnimatePresence>
+                        </div>
+
                         {!isExpanded && (
                           <p className="text-xs text-muted-foreground font-body line-clamp-2">
                             {insight.message}
                           </p>
                         )}
                       </button>
-                    </motion.div>
+                    </div>
                   );
                 })}
               </div>

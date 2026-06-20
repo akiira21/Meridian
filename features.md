@@ -8,7 +8,9 @@ Planed features -
 
 - [x] User profile page
 - [x] Notification
-- [] AI for all pages with alert notfication
+- [x] AI insight for whole day
+- [] AI for food logging
+- [] Page rendering optimization by prefetching (instagram style)
 - [] Plans and pricing
 - [] Food scan calorie detector
 - [] PWA web app

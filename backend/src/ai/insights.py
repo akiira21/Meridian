@@ -1,5 +1,6 @@
 import json
 import logging
+import threading
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -16,9 +17,16 @@ from notes.models import Note
 
 logger = logging.getLogger(__name__)
 
+# In-memory lock to prevent race-condition double-generation for the same user
+_generation_locks: set[int] = set()
+_lock_mutex = threading.Lock()
+
 
 class DailyInsightService:
-    """AI companion that generates morning, noon, and night insights based on user's last 3 days of data."""
+    """AI companion that generates morning, noon, and night insights based on user's last 3 days of data.
+
+    Guarantees at most ONE OpenAI API call per user per day, even across concurrent requests.
+    """
 
     SYSTEM_PROMPT = """You are a thoughtful Indian health and wellness companion. Based on the user's last 3 days of activity (food, water, todos, notes), generate personalized insights for morning, noon, and night.
 
@@ -180,10 +188,15 @@ Return ONLY valid JSON in this exact format:
             return None
 
     def get_or_generate_today_insights(self, db: Session, user_id: int) -> list[AIInsight]:
-        """Get today's insights. If none exist, generate and store them."""
+        """Get today's insights. If none exist, generate and store them.
+
+        Thread-safe: concurrent requests for the same user on the same day
+        will only trigger a single OpenAI API call.
+        """
         today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
         tomorrow = today + timedelta(days=1)
 
+        # Fast path: already exists
         existing = db.query(AIInsight).filter(
             AIInsight.user_id == user_id,
             AIInsight.generated_at >= today,
@@ -193,26 +206,62 @@ Return ONLY valid JSON in this exact format:
         if existing:
             return existing
 
-        generated = self.generate_insights(db, user_id)
-        if not generated:
+        # Acquire per-user lock to prevent race-condition double-generation
+        with _lock_mutex:
+            is_generating = user_id in _generation_locks
+            if not is_generating:
+                _generation_locks.add(user_id)
+
+        if is_generating:
+            # Another thread is already generating for this user; wait and return existing
+            import time
+            for _ in range(30):  # wait up to ~3 seconds
+                time.sleep(0.1)
+                db.expire_all()
+                existing = db.query(AIInsight).filter(
+                    AIInsight.user_id == user_id,
+                    AIInsight.generated_at >= today,
+                    AIInsight.generated_at < tomorrow,
+                ).all()
+                if existing:
+                    return existing
+            logger.warning(f"Timeout waiting for AI insight generation for user {user_id}")
             return []
 
-        insights = []
-        for period in ("morning", "noon", "night"):
-            content = generated[period]
-            insight = AIInsight(
-                user_id=user_id,
-                insight_type=period,
-                content=content,
-            )
-            db.add(insight)
-            insights.append(insight)
+        try:
+            # Double-check after acquiring lock (another thread may have finished)
+            existing = db.query(AIInsight).filter(
+                AIInsight.user_id == user_id,
+                AIInsight.generated_at >= today,
+                AIInsight.generated_at < tomorrow,
+            ).all()
+            if existing:
+                return existing
 
-        db.commit()
-        for i in insights:
-            db.refresh(i)
+            generated = self.generate_insights(db, user_id)
+            if not generated:
+                return []
 
-        return insights
+            insights = []
+            for period in ("morning", "noon", "night"):
+                content = generated[period]
+                insight = AIInsight(
+                    user_id=user_id,
+                    insight_type=period,
+                    content=content,
+                )
+                db.add(insight)
+                insights.append(insight)
+
+            db.commit()
+            for i in insights:
+                db.refresh(i)
+
+            logger.info(f"Generated AI insights for user {user_id} ({len(insights)} items)")
+            return insights
+        finally:
+            with _lock_mutex:
+                _generation_locks.discard(user_id)
 
     def mark_read(self, db: Session, insight_id: int, user_id: int) -> bool:
         insight = db.query(AIInsight).filter(

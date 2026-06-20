@@ -734,7 +734,7 @@ export default function TodosPage() {
                         {todo.title}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 mt-1.5">
+                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-body text-[10px] font-medium ${eCfg.bg} ${eCfg.color}`}>
                         <EIcon size={10} />
                         {eCfg.label}
@@ -750,8 +750,44 @@ export default function TodosPage() {
                         </span>
                       )}
                     </div>
+                    {/* Mobile action bar */}
+                    <div className="flex sm:hidden items-center gap-1.5 mt-2 pt-2 border-t border-border/40">
+                      <button
+                        onClick={() => openEdit(todo)}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-body font-medium bg-muted text-muted-foreground transition-colors"
+                      >
+                        <Pencil size={10} />
+                        Edit
+                      </button>
+                      {todo.status !== "completed" && (
+                        <>
+                          <button
+                            onClick={() => openFocus(todo)}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-body font-medium bg-muted text-muted-foreground transition-colors"
+                          >
+                            <Timer size={10} />
+                            Focus
+                          </button>
+                          <button
+                            onClick={() => handleSnooze(todo.id)}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-body font-medium bg-muted text-muted-foreground transition-colors"
+                          >
+                            <Pause size={10} />
+                            Snooze
+                          </button>
+                        </>
+                      )}
+                      <button
+                        onClick={() => handleDelete(todo.id)}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-body font-medium bg-destructive/10 text-destructive transition-colors"
+                      >
+                        <Trash2 size={10} />
+                        Delete
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {/* Desktop: hover-only actions */}
+                  <div className="hidden sm:flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={() => openEdit(todo)}
                       className="p-1.5 rounded-full hover:bg-muted transition-colors"

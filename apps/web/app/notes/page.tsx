@@ -217,7 +217,8 @@ export default function NotesPage() {
                     <h3 className="font-heading text-base font-medium tracking-tight line-clamp-1">
                       {note.title}
                     </h3>
-                    <div className="flex items-center gap-0.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
+                    {/* Desktop: hover-only actions */}
+                    <div className="hidden sm:flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -247,7 +248,43 @@ export default function NotesPage() {
                       <MarkdownPreview content={note.content} />
                     </div>
                   )}
-                  <p className="mt-auto pt-3 text-[10px] text-muted-foreground font-body">
+                  {/* Mobile: visible action bar at bottom */}
+                  <div className="flex sm:hidden items-center justify-between mt-3 pt-2 border-t border-border/40">
+                    <p className="text-[10px] text-muted-foreground font-body">
+                      {new Date(note.updated_at + "Z").toLocaleDateString([], {
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </p>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleTogglePin(note.id);
+                        }}
+                        className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-body font-medium transition-colors ${
+                          note.is_pinned
+                            ? "bg-foreground/10 text-foreground"
+                            : "bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        <Pin size={10} />
+                        {note.is_pinned ? "Pinned" : "Pin"}
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(note.id);
+                        }}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-body font-medium bg-destructive/10 text-destructive transition-colors"
+                      >
+                        <Trash2 size={10} />
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                  {/* Desktop date */}
+                  <p className="hidden sm:block mt-auto pt-3 text-[10px] text-muted-foreground font-body">
                     {new Date(note.updated_at + "Z").toLocaleDateString([], {
                       month: "short",
                       day: "numeric",
